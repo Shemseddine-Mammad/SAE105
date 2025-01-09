@@ -1,0 +1,96 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Rapport d'Analyse Tcpdump</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .container {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        img {
+            max-width: 100%;
+            height: auto;
+            margin: 20px 0;
+        }
+        h2 {
+            color: #333;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Rapport d'Analyse Tcpdump</h1>
+    <div class="container">
+        <h2>Informations Générales</h2>
+        <p>Nombre total de paquets : 182</p>
+        <p>Date d'analyse : 2025-01-09 11:19:09</p>
+    </div>
+
+    <div class="container">
+        <h2>Distribution des Protocoles</h2>
+        <img src="protocols.png" alt="Distribution des Protocoles">
+        <table>
+            <tr>
+                <th>Protocole</th>
+                <th>Nombre de Paquets</th>
+            </tr>
+            
+        </table>
+    </div>
+
+    <div class="container">
+        <h2>Distribution des Tailles de Paquets</h2>
+        <img src="packet_sizes.png" alt="Distribution des Tailles de Paquets">
+        <p>Taille moyenne des paquets : 68.44 bytes</p>
+    </div>
+
+    <div class="container">
+        <h2>Top 10 des Adresses IP Source</h2>
+        <table>
+            <tr>
+                <th>Adresse IP</th>
+                <th>Nombre de Paquets</th>
+            </tr>
+            
+        </table>
+    </div>
+
+    <div class="container">
+        <h2>Top 10 des Adresses IP Destination</h2>
+        <table>
+            <tr>
+                <th>Adresse IP</th>
+                <th>Nombre de Paquets</th>
+            </tr>
+            
+        </table>
+    </div>
+</body>
+</html>
+        
