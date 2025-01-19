@@ -7,9 +7,11 @@ from io import BytesIO
 import webbrowser
 import os
 from collections import Counter
+
 """code pour fichier .txt
 site internet a terminer 
 version a mettre pour le prof """
+
 def analyze_tcpdump(file_path):
     """Analyse un fichier tcpdump et retourne les statistiques détaillées"""
     try:
@@ -57,7 +59,6 @@ def analyze_tcpdump(file_path):
         protocol_counts = Counter(protocols)
         ip_counts = Counter(ip_src)
         
-        # Statistiques de base
         stats = {
             'network_stats': {
                 'packets_analyzed': len(packets),
@@ -76,11 +77,9 @@ def analyze_tcpdump(file_path):
                 }
             },
             'protocol_distribution': protocol_counts,
-            'ip_distribution': dict(sorted(ip_counts.items(), key=lambda x: x[1], reverse=True)[:5]),
             'detected_anomalies': []
         }
 
-        # Détection des anomalies
         threshold = len(packets) / len(set([p['source'] for p in packets])) * 2
         for src, count in ip_counts.items():
             if count > threshold:
@@ -98,36 +97,24 @@ def analyze_tcpdump(file_path):
         print(f"Erreur lors de l'analyse du fichier: {str(e)}")
         return None
 
-def generate_dual_pie_charts(protocol_counts, ip_counts):
-    """Génère deux graphiques camembert côte à côte"""
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 7))
+def generate_protocol_chart(protocol_counts):
+    """Génère un graphique camembert des protocoles"""
+    plt.figure(figsize=(10, 7))
     
     colors = ['#FF9999', '#66B2FF', '#99FF99', '#FFCC99', '#FF99CC', 
              '#99FFCC', '#FFB366', '#FF99FF', '#99CCFF', '#FFB3B3']
     
-    # Graphique des protocoles
-    wedges1, texts1, autotexts1 = ax1.pie(protocol_counts.values(),
-                                         labels=protocol_counts.keys(),
-                                         autopct='%1.1f%%',
-                                         colors=colors[:len(protocol_counts)])
-    ax1.set_title('Répartition des Protocoles')
-    
-    # Graphique des IPs
-    wedges2, texts2, autotexts2 = ax2.pie(ip_counts.values(),
-                                         labels=ip_counts.keys(),
-                                         autopct='%1.1f%%',
-                                         colors=colors[:len(ip_counts)])
-    ax2.set_title('Top 5 des IPs Sources')
-    
-    plt.setp(autotexts1 + autotexts2, size=8, weight="bold")
-    plt.setp(texts1 + texts2, size=8)
+    plt.pie(protocol_counts.values(),
+            labels=protocol_counts.keys(),
+            autopct='%1.1f%%',
+            colors=colors[:len(protocol_counts)])
+    plt.title('Répartition des Protocoles')
     
     plt.tight_layout()
     
     return plot_to_base64()
 
 def plot_to_base64():
-    """Convertit le plot matplotlib actuel en image base64"""
     buffer = BytesIO()
     plt.savefig(buffer, format='png')
     buffer.seek(0)
@@ -137,69 +124,175 @@ def plot_to_base64():
     return base64.b64encode(image_png).decode()
 
 def generate_html_report(stats):
-    """Génère le rapport HTML avec les graphiques et statistiques"""
     html_content = f"""
     <!DOCTYPE html>
     <html lang="fr">
     <head>
         <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Rapport d'analyse du trafic réseau</title>
         <style>
+            :root {{
+                --primary-color: #4285f4;
+                --warning-color: #ff9800;
+                --danger-color: #dc3545;
+                --success-color: #4caf50;
+                --background-color: #f8f9fa;
+                --border-radius: 10px;
+                --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            }}
+
+            * {{
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }}
+
             body {{
-                font-family: Arial, sans-serif;
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                 line-height: 1.6;
-                max-width: 1200px;
-                margin: 0 auto;
-                padding: 20px;
-                background-color: #f5f5f5;
+                color: #333;
+                background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%);
+                min-height: 100vh;
+                padding: 2rem;
             }}
+
             .container {{
+                max-width: 1400px;
+                margin: 0 auto;
                 background-color: white;
-                padding: 20px;
-                border-radius: 8px;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                border-radius: var(--border-radius);
+                box-shadow: var(--box-shadow);
+                padding: 2rem;
             }}
+
+            h1, h2, h3 {{
+                color: #2c3e50;
+                margin-bottom: 1.5rem;
+            }}
+
+            h1 {{
+                text-align: center;
+                font-size: 2.5rem;
+                padding-bottom: 1rem;
+                border-bottom: 3px solid var(--primary-color);
+                margin-bottom: 2rem;
+            }}
+
             .stats-overview {{
                 display: grid;
-                grid-template-columns: repeat(4, 1fr);
-                gap: 20px;
-                margin-bottom: 30px;
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                gap: 1.5rem;
+                margin-bottom: 2.5rem;
             }}
+
             .stat-card {{
                 background: white;
-                padding: 20px;
-                border-radius: 8px;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                padding: 1.5rem;
+                border-radius: var(--border-radius);
+                box-shadow: var(--box-shadow);
+                transition: transform 0.3s ease;
+                border: 1px solid #e0e0e0;
             }}
+
+            .stat-card:hover {{
+                transform: translateY(-5px);
+            }}
+
+            .stat-card h3 {{
+                font-size: 1.1rem;
+                color: #666;
+                margin-bottom: 1rem;
+            }}
+
             .stat-card .value {{
-                font-size: 24px;
+                font-size: 2rem;
                 font-weight: bold;
-                margin-bottom: 5px;
+                margin-bottom: 0.5rem;
             }}
+
             .stat-card .subvalue {{
                 color: #666;
-                font-size: 14px;
+                font-size: 0.9rem;
+                font-weight: 500;
             }}
+
             .charts-section {{
-                margin: 20px 0;
-                text-align: center;
+                background: white;
+                border-radius: var(--border-radius);
+                padding: 2rem;
+                margin: 2rem 0;
+                box-shadow: var(--box-shadow);
             }}
+
+            .charts-section img {{
+                width: 100%;
+                height: auto;
+                border-radius: var(--border-radius);
+            }}
+
+            .stats-section {{
+                background: white;
+                border-radius: var(--border-radius);
+                padding: 2rem;
+                margin: 2rem 0;
+                box-shadow: var(--box-shadow);
+            }}
+
             .anomalies-table {{
                 width: 100%;
-                border-collapse: collapse;
-                margin-top: 20px;
+                border-collapse: separate;
+                border-spacing: 0;
+                margin-top: 1rem;
             }}
-            .anomalies-table th, .anomalies-table td {{
-                padding: 12px;
-                border: 1px solid #ddd;
+
+            .anomalies-table th,
+            .anomalies-table td {{
+                padding: 1rem;
                 text-align: left;
+                border: 1px solid #e0e0e0;
             }}
+
             .anomalies-table th {{
-                background-color: #f8f9fa;
+                background-color: var(--background-color);
+                font-weight: 600;
+                color: #2c3e50;
+                position: sticky;
+                top: 0;
             }}
+
+            .anomalies-table tr:nth-child(even) {{
+                background-color: var(--background-color);
+            }}
+
+            .anomalies-table tr:hover {{
+                background-color: #f0f4f8;
+            }}
+
             .level-high {{
-                color: #dc3545;
+                color: var(--danger-color);
                 font-weight: bold;
+                padding: 0.25rem 0.5rem;
+                border-radius: 4px;
+                background-color: rgba(220, 53, 69, 0.1);
+            }}
+
+            @media (max-width: 768px) {{
+                body {{
+                    padding: 1rem;
+                }}
+
+                .stats-overview {{
+                    grid-template-columns: 1fr;
+                }}
+
+                .container {{
+                    padding: 1rem;
+                }}
+
+                h1 {{
+                    font-size: 2rem;
+                }}
             }}
         </style>
     </head>
@@ -210,32 +303,32 @@ def generate_html_report(stats):
             <div class="stats-overview">
                 <div class="stat-card">
                     <h3>Paquets analysés</h3>
-                    <div class="value" style="color: #4285f4;">{stats['network_stats']['packets_analyzed']}</div>
+                    <div class="value" style="color: var(--primary-color);">{stats['network_stats']['packets_analyzed']}</div>
                     <div class="subvalue">{stats['network_stats']['packets_rate']}</div>
                 </div>
                 
                 <div class="stat-card">
                     <h3>Anomalies</h3>
-                    <div class="value" style="color: #dc3545;">{stats['network_stats']['anomalies']['count']}</div>
+                    <div class="value" style="color: var(--danger-color);">{stats['network_stats']['anomalies']['count']}</div>
                     <div class="subvalue">{stats['network_stats']['anomalies']['percentage']}</div>
                 </div>
                 
                 <div class="stat-card">
                     <h3>IPs suspectes</h3>
-                    <div class="value" style="color: #ff9800;">{stats['network_stats']['suspicious_ips']['count']}</div>
+                    <div class="value" style="color: var(--warning-color);">{stats['network_stats']['suspicious_ips']['count']}</div>
                     <div class="subvalue">{stats['network_stats']['suspicious_ips']['percentage']}</div>
                 </div>
                 
                 <div class="stat-card">
                     <h3>Services</h3>
-                    <div class="value" style="color: #4caf50;">{stats['network_stats']['services']['count']}</div>
+                    <div class="value" style="color: var(--success-color);">{stats['network_stats']['services']['count']}</div>
                     <div class="subvalue">{stats['network_stats']['services']['percentage']}</div>
                 </div>
             </div>
 
             <div class="charts-section">
-                <img src="data:image/png;base64,{generate_dual_pie_charts(stats['protocol_distribution'], stats['ip_distribution'])}" 
-                     alt="Distribution des protocoles et IPs">
+                <img src="data:image/png;base64,{generate_protocol_chart(stats['protocol_distribution'])}" 
+                     alt="Distribution des protocoles">
             </div>
             
             <div class="stats-section">
