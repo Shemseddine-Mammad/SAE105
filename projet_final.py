@@ -98,17 +98,20 @@ def analyze_tcpdump(file_path):
         return None
 
 def generate_protocol_chart(protocol_counts):
-    """Génère un graphique camembert des protocoles"""
+    """Génère un graphique camembert des 10 protocoles les plus utilisés"""
     plt.figure(figsize=(10, 7))
     
     colors = ['#FF9999', '#66B2FF', '#99FF99', '#FFCC99', '#FF99CC', 
              '#99FFCC', '#FFB366', '#FF99FF', '#99CCFF', '#FFB3B3']
     
-    plt.pie(protocol_counts.values(),
-            labels=protocol_counts.keys(),
+    # Prendre les 10 protocoles les plus fréquents
+    top_10_protocols = dict(sorted(protocol_counts.items(), key=lambda x: x[1], reverse=True)[:10])
+    
+    plt.pie(top_10_protocols.values(),
+            labels=top_10_protocols.keys(),
             autopct='%1.1f%%',
-            colors=colors[:len(protocol_counts)])
-    plt.title('Répartition des Protocoles')
+            colors=colors[:len(top_10_protocols)])
+    plt.title('Top 10 des Protocoles les Plus Utilisés')
     
     plt.tight_layout()
     
@@ -368,7 +371,7 @@ def generate_html_report(stats):
     webbrowser.open('file://' + os.path.realpath('rapport_projet_final.html'))
 
 def main():
-    file_path = 'fichier182.txt'
+    file_path = 'DumpFile.txt'
     stats = analyze_tcpdump(file_path)
     if stats:
         generate_html_report(stats)
