@@ -7,48 +7,53 @@ from io import BytesIO
 import webbrowser
 import os
 from collections import Counter
+import csv
 
 """code pour fichier .txt
 site internet a terminer 
 version a mettre pour le prof """
+def detect_anomalies(packet_info):
+    """Détecte les anomalies dans les paquets"""
+    suspicious_flags = ['[S]', '[S.]', '[SF]', '[P.]']
+    return any(flag in packet_info for flag in suspicious_flags)
 
 def analyze_tcpdump(file_path):
-    """Analyse un fichier tcpdump et retourne les statistiques détaillées"""
     try:
         with open(file_path, 'r', encoding='utf-8') as file:
             lines = file.readlines()
         
-        # Extraction des protocoles et des IPs
         protocols = []
         ip_src = []
         ip_dst = []
         packets = []
+        anomalies = []
         
-        # Expression régulière pour extraire les IPs et protocoles
         ip_pattern = r'IP (?:([0-9]+(?:\.[0-9]+){3})\.([0-9]+))? ?([0-9]+(?:\.[0-9]+){3})?'
-        packet_pattern = re.compile(r'(\d{2}:\d{2}:\d{2}\.\d{6})\s+IP\s+(.*?)\s+>\s+(.*?):\s+(.*)')
+        packet_pattern = re.compile(r'(\d{2}:\d{2}:\d{2}\.\d{6})\s+(.*?)(?: > |, )(.*?)(?:,|\:) (.*)')
         
         for line in lines:
-            # Extraction des informations détaillées des paquets
-            match = packet_pattern.match(line)
-            if match:
-                timestamp, src, dst, info = match.groups()
-                packets.append({
-                    'timestamp': timestamp,
-                    'source': src,
-                    'destination': dst,
-                    'info': info
-                })
-            
-            if 'IP' in line:
-                # Extraction du protocole
-                if '>' in line:
-                    parts = line.split('>')
-                    if len(parts) > 1:
-                        proto = parts[1].strip().split(':')[0].strip().split('.')[-1]
-                        protocols.append(proto)
+            if not line.startswith('\t'):
+                match = packet_pattern.match(line)
+                if match:
+                    timestamp, src, dst, info = match.groups()
+                    packet = {
+                        'timestamp': timestamp,
+                        'source': src,
+                        'destination': dst,
+                        'info': info
+                    }
+                    packets.append(packet)
+                    
+                    if detect_anomalies(info):
+                        anomalies.append(packet)
                 
-                # Extraction des IPs
+                if 'IP' in line or 'ARP' in line or 'STP' in line:
+                    if '>' in line:
+                        proto = line.split('>')[1].strip().split(':')[0].strip().split('.')[-1]
+                    else:
+                        proto = line.split(',')[0].split()[1].rstrip(',')
+                    protocols.append(proto)
+                
                 ip_match = re.search(ip_pattern, line)
                 if ip_match:
                     if ip_match.group(1):
@@ -59,17 +64,35 @@ def analyze_tcpdump(file_path):
         protocol_counts = Counter(protocols)
         ip_counts = Counter(ip_src)
         
+        # Calcul du seuil pour les pics de trafic
+        seuil = len(packets) / len(set([p['source'] for p in packets])) * 2
+        anomalies_trafic = []
+        ips_suspectes = set()
+        
+        for src, count in ip_counts.items():
+            if count > seuil:
+                anomalies_trafic.append({
+                    'timestamp': packets[0]['timestamp'] if packets else '',
+                    'ip_source': src,
+                    'type': 'Pic de Trafic',
+                    'details': f'Pic de trafic: {count/60:.2f} paquets/s',
+                    'level': 'ÉLEVÉ'
+                })
+                ips_suspectes.add(src)
+
+        # Mise à jour des statistiques avec les compteurs d'anomalies
+        total_anomalies = len(anomalies_trafic)
         stats = {
             'network_stats': {
                 'packets_analyzed': len(packets),
                 'packets_rate': f"{len(packets)/60:.1f}/s",
                 'anomalies': {
-                    'count': sum(1 for p in packets if 'Flags [S]' in p['info']),
-                    'percentage': f"{sum(1 for p in packets if 'Flags [S]' in p['info'])/len(packets)*100:.1f}%"
+                    'count': total_anomalies,
+                    'percentage': f"{(total_anomalies/len(packets)*100) if packets else 0:.1f}%"
                 },
                 'suspicious_ips': {
-                    'count': len(set([p['source'] for p in packets if 'Flags [S]' in p['info']])),
-                    'percentage': f"{len(set([p['source'] for p in packets if 'Flags [S]' in p['info']]))/len(set([p['source'] for p in packets]))*100:.1f}%"
+                    'count': len(ips_suspectes),
+                    'percentage': f"{(len(ips_suspectes)/len(set(ip_src))*100) if ip_src else 0:.1f}%"
                 },
                 'services': {
                     'count': len(set([p['destination'].split('.')[-1] for p in packets if '.' in p['destination']])),
@@ -77,25 +100,15 @@ def analyze_tcpdump(file_path):
                 }
             },
             'protocol_distribution': protocol_counts,
-            'detected_anomalies': []
+            'detected_anomalies': anomalies_trafic
         }
-
-        threshold = len(packets) / len(set([p['source'] for p in packets])) * 2
-        for src, count in ip_counts.items():
-            if count > threshold:
-                stats['detected_anomalies'].append({
-                    'timestamp': packets[0]['timestamp'] if packets else '',
-                    'ip_source': src,
-                    'type': 'Traffic Burst',
-                    'details': f'Pic de trafic: {count/60:.2f} paquets/s',
-                    'level': 'HIGH'
-                })
 
         return stats
 
     except Exception as e:
         print(f"Erreur lors de l'analyse du fichier: {str(e)}")
         return None
+
 
 def generate_protocol_chart(protocol_counts):
     """Génère un graphique camembert des 10 protocoles les plus utilisés"""
@@ -125,6 +138,54 @@ def plot_to_base64():
     buffer.close()
     plt.close()
     return base64.b64encode(image_png).decode()
+
+def generate_csv_report(stats, output_file='rapport_analyse.csv'):
+    """
+    Génère un rapport CSV à partir des statistiques d'analyse réseau
+    """
+    csv_content = [
+        ['Type d\'analyse', 'Valeur', 'Détails'],
+        ['Paquets analysés', 
+         stats['network_stats']['packets_analyzed'],
+         stats['network_stats']['packets_rate']],
+        ['Anomalies',
+         stats['network_stats']['anomalies']['count'],
+         stats['network_stats']['anomalies']['percentage']],
+        ['IPs suspectes',
+         stats['network_stats']['suspicious_ips']['count'],
+         stats['network_stats']['suspicious_ips']['percentage']],
+        ['Services',
+         stats['network_stats']['services']['count'],
+         stats['network_stats']['services']['percentage']]
+    ]
+
+    # Ajouter la distribution des protocoles
+    for protocol, percentage in stats['protocol_distribution'].items():
+        csv_content.append([
+            'Distribution protocoles',
+            protocol,
+            f"{(percentage/stats['network_stats']['packets_analyzed'])*100:.1f}%"
+        ])
+
+    # Ajouter les anomalies détectées
+    for i, anomaly in enumerate(stats['detected_anomalies'], 1):
+        csv_content.append([
+            f'Anomalie {i}',
+            anomaly['ip_source'],
+            anomaly['details']
+        ])
+    # Écriture dans le fichier CSV
+    with open(output_file, 'w', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        writer.writerows(csv_content)
+    
+    return output_file
+
+# Usage dans le main:
+# stats = analyze_tcpdump(file_path)
+# if stats:
+#     csv_file = generate_csv_report(stats)
+#     print(f"Rapport CSV généré: {csv_file}")
 
 def generate_html_report(stats):
     html_content = f"""
@@ -330,8 +391,8 @@ def generate_html_report(stats):
             </div>
 
             <div class="charts-section">
-                <img src="data:image/png;base64,{generate_protocol_chart(stats['protocol_distribution'])}" 
-                     alt="Distribution des protocoles">
+                <a href= "{generate_csv_report(stats)}"><img src="data:image/png;base64,{generate_protocol_chart(stats['protocol_distribution'])}" 
+                     alt="Distribution des protocoles"> </a>
             </div>
             
             <div class="stats-section">
@@ -370,11 +431,14 @@ def generate_html_report(stats):
     
     webbrowser.open('file://' + os.path.realpath('rapport_projet_final.html'))
 
+
+
 def main():
-    file_path = 'DumpFile.txt'
+    file_path = 'fichier182.txt'
     stats = analyze_tcpdump(file_path)
     if stats:
         generate_html_report(stats)
+        generate_csv_report(stats)
     else:
         print("Erreur lors de l'analyse des données")
 
