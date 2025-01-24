@@ -1,13 +1,18 @@
 Type d'analyse,Valeur,Détails
-Paquets analysés,22,0.4/s
-Anomalies,1,4.5%
-IPs suspectes,1,100.0%
-Services,7,-
-Distribution protocoles,50019,18.2%
-Distribution protocoles,ssh,22.7%
-Distribution protocoles,domain,9.1%
-Distribution protocoles,58466,4.5%
-Distribution protocoles,50245,13.6%
-Distribution protocoles,53220,4.5%
-Distribution protocoles,http,27.3%
-Anomalie 1,192.168.190.130,Pic de trafic: 0.08 paquets/s
+Paquets analysés,42,0.7/s
+Anomalies,1,2.4%
+IPs suspectes,1,25.0%
+Services,18,-
+Distribution protocoles,ARP,42.9%
+Distribution protocoles,gvcp,19.0%
+Distribution protocoles,netbios-ns,2.4%
+Distribution protocoles,STP,4.8%
+Distribution protocoles,domain,11.9%
+Distribution protocoles,61315,2.4%
+Distribution protocoles,53027,2.4%
+Distribution protocoles,hsrp,4.8%
+Distribution protocoles,ssdp,2.4%
+Distribution protocoles,62537,2.4%
+Distribution protocoles,60304,2.4%
+Distribution protocoles,52187,2.4%
+Anomalie 1,161.3.129.167,Pic de trafic: 0.08 paquets/s

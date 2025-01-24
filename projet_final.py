@@ -9,9 +9,6 @@ import os
 from collections import Counter
 import csv
 
-"""code pour fichier .txt
-site internet a terminer 
-version a mettre pour le prof """
 def detect_anomalies(packet_info):
     """Détecte les anomalies dans les paquets"""
     suspicious_flags = ['[S]', '[S.]', '[SF]', '[P.]']
@@ -434,7 +431,7 @@ def generate_html_report(stats):
 
 
 def main():
-    file_path = 'fichier182.txt'
+    file_path = 'DumpFile05.txt'
     stats = analyze_tcpdump(file_path)
     if stats:
         generate_html_report(stats)
